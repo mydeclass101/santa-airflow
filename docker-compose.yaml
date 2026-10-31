@@ -2,8 +2,8 @@
 x-airflow-common:
   &airflow-common
   
-  image: ${AIRFLOW_IMAGE_NAME}
-  # build: .
+  # image: ${AIRFLOW_IMAGE_NAME}
+  build: .
   env_file:
     - ${ENV_FILE_PATH:-.env}
   environment:
@@ -22,14 +22,17 @@ x-airflow-common:
     AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "10"              # เห็นไฟล์ DAG ใหม่ภายใน ~10 วินาที (ค่าเดิม 5 นาที)
     AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL: "10"     # แก้ไฟล์แล้วเห็นผลภายใน ~10 วินาที
 
-    AIRFLOW_CONN_SMTP_DEFAULT: '{"conn_type": "smtp", "host": "${SMTP_HOST:-smtp.gmail.com}", "port": ${SMTP_PORT:-587}, "login": "${SMTP_USER:-}", "password": "${SMTP_PASSWORD:-}", "extra": {"from_email": "${SMTP_USER:-}", "disable_ssl": true}}'
-    AIRFLOW_VAR_ALERT_EMAIL: ${ALERT_EMAIL:-${SMTP_USER:-}}
-
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+
+    - ${DATA_SOURCES_DIR:-../data-sources}/inbox:/opt/airflow/inbox:ro
+    - ${TRINO_CERT_DIR:-../trino/certs/public}:/opt/airflow/certs:ro
+
+  networks: [default, data-platform, data-sources]
+
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -208,3 +211,9 @@ services:
 
 volumes:
   postgres-db-volume:
+
+networks:
+  data-platform:
+    external: true    
+  data-sources:
+    external: true 
